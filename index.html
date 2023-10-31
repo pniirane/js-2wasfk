@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>SVG Drawing</title>
+  </head>
+  <body>
+    <h1>Interactive SVG Drawing</h1>
+
+    <!-- Buttons to switch drawing mode -->
+    <button onclick="setMode('rectangle')">Rectangle</button>
+    <button onclick="setMode('circle')">Circle</button>
+    <button onclick="setMode('line')">Line</button>
+
+    <!-- SVG container -->
+    <svg
+      id="svgCanvas"
+      width="500"
+      height="500"
+      style="border: 1px solid black"
+    ></svg>
+
+    <script>
+      const svgCanvas = document.getElementById('svgCanvas');
+      let drawing = false;
+      let mode = null;
+      let startX = 0;
+      let startY = 0;
+      let tempShape = null;
+
+      let undoStack = [];
+      let redoStack = [];
+
+      function setMode(newMode) {
+        mode = newMode;
+      }
+
+      svgCanvas.addEventListener('mousedown', (e) => {
+        drawing = true;
+        const rect = svgCanvas.getBoundingClientRect();
+        startX = e.clientX - rect.left;
+        startY = e.clientY - rect.top;
+
+        if (mode === 'rectangle') {
+          tempShape = drawRectangle(startX, startY, 0, 0, 'red');
+        } else if (mode === 'circle') {
+          tempShape = drawCircle(startX, startY, 0, 'blue');
+        } else if (mode === 'line') {
+          tempShape = drawLine(startX, startY, startX, startY, 'green');
+        }
+      });
+
+      svgCanvas.addEventListener('mousemove', (e) => {
+        if (!drawing) return;
+
+        const rect = svgCanvas.getBoundingClientRect();
+        const endX = e.clientX - rect.left;
+        const endY = e.clientY - rect.top;
+
+        const absWidth = Math.abs(endX - startX);
+        const absHeight = Math.abs(endY - startY);
+
+        if (mode === 'rectangle') {
+          tempShape.setAttribute('x', endX > startX ? startX : endX);
+          tempShape.setAttribute('y', endY > startY ? startY : endY);
+          tempShape.setAttribute('width', absWidth);
+          tempShape.setAttribute('height', absHeight);
+        } else if (mode === 'circle') {
+          const radius = Math.sqrt(
+            Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)
+          );
+          tempShape.setAttribute('r', radius);
+        } else if (mode === 'line') {
+          tempShape.setAttribute('x2', endX);
+          tempShape.setAttribute('y2', endY);
+        }
+      });
+
+      svgCanvas.addEventListener('mouseup', () => {
+        if (tempShape) {
+          undoStack.push(tempShape);
+          redoStack = []; // Clear the redo stack when a new shape is drawn
+        }
+        drawing = false;
+        tempShape = null;
+      });
+
+      function drawRectangle(x, y, width, height, color) {
+        const rect = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'rect'
+        );
+        rect.setAttribute('x', x);
+        rect.setAttribute('y', y);
+        rect.setAttribute('width', width);
+        rect.setAttribute('height', height);
+        rect.setAttribute('fill', color);
+        svgCanvas.appendChild(rect);
+        return rect;
+      }
+
+      function drawCircle(cx, cy, r, color) {
+        const circle = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'circle'
+        );
+        circle.setAttribute('cx', cx);
+        circle.setAttribute('cy', cy);
+        circle.setAttribute('r', r);
+        circle.setAttribute('fill', color);
+        svgCanvas.appendChild(circle);
+        return circle;
+      }
+
+      function drawLine(x1, y1, x2, y2, color) {
+        const line = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'line'
+        );
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke', color);
+        svgCanvas.appendChild(line);
+        return line;
+      }
+
+      // Listen for keydown events to handle undo and redo
+      document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'z') {
+          undo();
+        } else if (e.ctrlKey && e.key === 'r') {
+          redo();
+        }
+      });
+
+      function undo() {
+        if (undoStack.length > 0) {
+          const shape = undoStack.pop();
+          svgCanvas.removeChild(shape);
+          redoStack.push(shape);
+        }
+      }
+
+      function redo() {
+        if (redoStack.length > 0) {
+          const shape = redoStack.pop();
+          svgCanvas.appendChild(shape);
+          undoStack.push(shape);
+        }
+      }
+    </script>
+  </body>
+</html>
